@@ -1,0 +1,11 @@
+{
+	"manifest_version": 2,
+	"name": "Keep My Monitors Awake",
+	"version": "1",
+	"description": "Keep My Monitors Awake uses a simple but effective method to prevent your monitors from going to sleep. The extension periodically sends an inaudible audio signal to your monitors, which keeps them awake.",
+	"author": "Franck Dupont",
+	"background": {
+	    "scripts": ["background.js"],
+	    "persistent": true
+	 }
+}
