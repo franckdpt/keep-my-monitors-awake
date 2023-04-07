@@ -41,7 +41,7 @@ Actually, I think the extension works for any monitor.
 
 ## Support
 
-💡 If you have any issues with the extension or if you have any suggestions for how we can improve it, please submit a pull request on [the GitHub repo](https://github.com/franckdpt/keep-my-monitors-awake).
+💡 If you have any issues with the extension or if you have any suggestions for how we can improve it, please submit a pull request on [the GitHub repo](https://github.com/franckdpt/keep-my-monitors-awake/compare).
 
 ## Credits
 ❤️ Thank you @stuartdochertymusic for creating the sound asset [https://github.com/stuartdochertymusic/KRK_stayawake](https://github.com/stuartdochertymusic/KRK_stayawake)
