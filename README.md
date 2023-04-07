@@ -35,7 +35,7 @@ Keep My Monitors Awake works with a variety of monitors, including:
 
 Actually, I think the extension works for any monitor.
 
-👉 If you have a monitor that is not on this list but you have tested it with the extension and it works, please submit a pull request or fill **[this form](https://tally.so/r/n9By65)** to have it added to the list.
+👉 If you have a monitor that is not on this list but you have tested it with the extension and it works, please submit a pull request or fill **[this form](https://tally.so/r/n9By65){:target="_blank"}** to have it added to the list.
 
 
 ## Support
@@ -43,4 +43,4 @@ Actually, I think the extension works for any monitor.
 💡 If you have any issues with the extension or if you have any suggestions for how we can improve it, please submit a pull request on [the GitHub repo](https://github.com/franckdpt/keep-my-monitors-awake).
 
 ## Credits
-❤️ Thank you @stuartdochertymusic for creating the sound asset [https://github.com/stuartdochertymusic/KRK_stayawake](https://github.com/stuartdochertymusic/KRK_stayawake)
+❤️ Thank you @stuartdochertymusic for creating the sound asset [https://github.com/stuartdochertymusic/KRK_stayawake](https://github.com/stuartdochertymusic/KRK_stayawake){:target="_blank"}
