@@ -15,6 +15,7 @@ You can install the extension by following these steps:
 1. Download this repository and unzip it.
 2. Open Google Chrome or Brave.
 3. Go to: **[chrome://extensions/](chrome://extensions/)** (for Google Chrome users) or **[brave://extensions/](brave://extensions/)** (for Brave users)
+4. Turn ON the **"Developer mode"** (the right-top button).
 4. Click the **"Load unpacked"** button.
 5. Select the folder **keep-my-monitors-awake** you unzipped at first step. 
 
