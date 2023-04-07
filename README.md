@@ -41,7 +41,7 @@ Actually, I think the extension works for any monitor.
 
 ## Support
 
-💡 If you have any issues with the extension or if you have any suggestions for how we can improve it, please submit a pull request on [the GitHub repo](https://github.com/franckdpt/keep-my-monitors-awake/compare).
+💡 If you have any issues with the extension or if you have any suggestions for how we can improve it, please submit an issue on [this GitHub repo](https://github.com/franckdpt/keep-my-monitors-awake/issues).
 
 ## Donation
 ❤️ Your offered coffees are the finest ☕️
