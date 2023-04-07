@@ -1,6 +1,6 @@
 # Keep My Monitors Awake
 
-Keep My Monitors Awake is a simple browser extension for Chromium browser based (Google Chrome, Brave...) that prevents your monitors from going to sleep. 
+**Keep My Monitors Awake** is a simple browser extension for Chromium browser based (Google Chrome, Brave...) that prevents your monitors from going to sleep. 
 
 If you've ever been frustrated by your monitors going to sleep in the middle of a project or while you're listening to music, Keep My Monitors Awake is the solution you've been looking for.
 
