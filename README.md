@@ -47,7 +47,7 @@ Actually, I think the extension works for any monitor.
 ❤️ Your offered coffees are the finest ☕️
 
 - With **[dollars](https://tally.so/r/w8qy6P)**
-- With Etehreum or Polygon : **0x5180C7aBA0057aD28827b37E57130EC8fA591559**
+- With Ethereum or Polygon : **0x5180C7aBA0057aD28827b37E57130EC8fA591559**
 
 ## Credits
 Thank you @stuartdochertymusic for creating the sound asset [https://github.com/stuartdochertymusic/KRK_stayawake](https://github.com/stuartdochertymusic/KRK_stayawake)
