@@ -4,9 +4,6 @@ Keep My Monitors Awake is a simple browser extension for Chromium browser based 
 
 😤 If you've ever been frustrated by your monitors going to sleep in the middle of a project or while you're listening to music, Keep My Monitors Awake is the solution you've been looking for.
 
-🥰 By sending an inaudible audio signal to your monitors, this extension keeps them awake and prevents them from going to sleep, so you can keep working or listening without interruption. 
-
-
 ## How it works
 
 Keep My Monitors Awake uses a simple but effective method to prevent your monitors from going to sleep. The extension periodically sends an inaudible audio signal to your monitors, which keeps them awake.
