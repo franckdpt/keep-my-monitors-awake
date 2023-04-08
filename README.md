@@ -27,7 +27,7 @@ Once the extension is installed, it works automatically in the background. You d
 
 ## Enable / Disable the extension
 
-You can enable / disable the extension by simply clicking on the extension icon in the top Chrome taskbar (if pinned). When the extension is enabled, the icon is in color. When the extension is disabled, the icon is in black and white.
+You can enable / disable the extension by simply clicking on the extension icon in the top Chrome taskbar (if pinned). When the extension is enabled, the icon is in black. When the extension is disabled, the icon is in grey.
 
 By enabling or disabling the extension, you can easily control whether the audio signals are being sent to your monitors or not. This can be useful if you need silence for a certain period of time or if you want to save energy by disabling the extension for a while.
 
