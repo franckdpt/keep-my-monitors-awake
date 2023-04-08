@@ -5,10 +5,10 @@
 	"description": "A simple extension to prevent your monitors from going to sleep.",
 	"author": "Franck Dupont",
 	"icons": {
-		"16": "awake-logo-on16.png",
-      	"32": "awake-logo-on32.png",
-      	"48": "awake-logo-on48.png",
-      	"128": "awake-logo-on128.png"
+		"16": "/images/awake-logo-on16.png",
+      	"32": "/images/awake-logo-on32.png",
+      	"48": "/images/awake-logo-on48.png",
+      	"128": "/images/awake-logo-on128.png"
 	},
 	"background": {
 	    "scripts": ["background.js"],
@@ -16,10 +16,10 @@
 	},
 	"browser_action": {
     "default_icon": {
-    	"16": "awake-logo-on16.png",
-      	"32": "awake-logo-on32.png",
-      	"48": "awake-logo-on48.png",
-      	"128": "awake-logo-on128.png"
+    	"16": "/images/awake-logo-on16.png",
+      	"32": "/images/awake-logo-on32.png",
+      	"48": "/images/awake-logo-on48.png",
+      	"128": "/images/awake-logo-on128.png"
     },
     "default_title": "Keep My Monitors Awake"
   }
