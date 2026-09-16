@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Keep My Monitors Awake",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Keeps studio monitors awake with a smart signal that pauses during browser audio and calls.",
   "author": "Franck Dupont",
   "minimum_chrome_version": "109",

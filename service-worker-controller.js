@@ -151,6 +151,15 @@ export function createController(api, workerScope = globalThis) {
     }
   }
 
+  async function closeSignalDocument() {
+    if (!(await hasOffscreenDocument())) {
+      return false;
+    }
+
+    await api.offscreen.closeDocument();
+    return true;
+  }
+
   async function stopSignal() {
     if (!(await hasOffscreenDocument())) {
       return;
@@ -162,7 +171,7 @@ export function createController(api, workerScope = globalThis) {
         type: "STOP_SIGNAL",
       });
     } finally {
-      await api.offscreen.closeDocument();
+      await closeSignalDocument();
     }
   }
 
@@ -257,6 +266,10 @@ export function createController(api, workerScope = globalThis) {
       case "PLAY_NOW":
         await playSignal({ force: true });
         return getState();
+
+      case "SIGNAL_FINISHED":
+        await closeSignalDocument();
+        return { ok: true };
 
       default:
         return { ok: false, error: "Unknown message." };

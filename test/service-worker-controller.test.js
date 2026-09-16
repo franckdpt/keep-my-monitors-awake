@@ -135,6 +135,19 @@ test("the named alarm plays through one reusable offscreen document", async () =
   assert.equal(typeof mock.data.status.lastPlayedAt, "number");
 });
 
+test("a finished signal closes the offscreen document without replaying it", async () => {
+  const mock = createChromeMock();
+  const controller = createController(mock.api);
+  await controller.initialize({ playImmediately: true });
+  const messagesBeforeCleanup = mock.calls.messages.length;
+
+  const result = await controller.handleMessage({ type: "SIGNAL_FINISHED" });
+
+  assert.deepEqual(result, { ok: true });
+  assert.equal(mock.calls.closeDocument, 1);
+  assert.equal(mock.calls.messages.length, messagesBeforeCleanup);
+});
+
 test("smart mode skips scheduled playback while a browser tab is audible", async () => {
   const mock = createChromeMock();
   const controller = createController(mock.api);

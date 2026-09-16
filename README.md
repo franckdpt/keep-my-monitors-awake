@@ -17,6 +17,8 @@ Manifest V3. Chrome 109 or newer is required.
 - Smart quiet mode skips the signal during browser audio and video calls.
 - A two-minute grace period avoids firing during short pauses between sounds.
 - Active wake-up audio stops immediately when a Chrome tab starts playing sound.
+- Hardware Play/Pause keys never control or restart the wake-up signal.
+- The offscreen audio document closes as soon as each signal finishes.
 - Automatic alarm repair whenever Chrome starts or the service worker wakes up.
 - Clear ON/OFF toolbar status and a popup for settings and manual testing.
 - No remote scripts, analytics, network requests, or access to page content.
