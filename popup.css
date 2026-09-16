@@ -78,6 +78,11 @@ h1 {
   font-size: 12px;
 }
 
+.smart-control span {
+  max-width: 210px;
+  line-height: 1.35;
+}
+
 .switch {
   position: relative;
   flex: 0 0 auto;

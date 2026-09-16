@@ -4,6 +4,7 @@ const controls = {
   details: document.querySelector("#details"),
   enabled: document.querySelector("#enabled"),
   interval: document.querySelector("#interval"),
+  smartMode: document.querySelector("#smart-mode"),
   summary: document.querySelector("#summary"),
   test: document.querySelector("#test"),
   volume: document.querySelector("#volume"),
@@ -13,6 +14,7 @@ const controls = {
 function setBusy(busy) {
   controls.enabled.disabled = busy;
   controls.interval.disabled = busy;
+  controls.smartMode.disabled = busy;
   controls.test.disabled = busy;
   controls.volume.disabled = busy;
 }
@@ -33,6 +35,7 @@ function render(state) {
   const settings = normalizeSettings(state?.settings ?? DEFAULT_SETTINGS);
   controls.enabled.checked = settings.enabled;
   controls.interval.value = String(settings.intervalMinutes);
+  controls.smartMode.checked = settings.smartMode;
   controls.volume.value = String(Math.round(settings.volume * 100));
   controls.volumeValue.value = `${Math.round(settings.volume * 100)}%`;
   controls.summary.textContent = settings.enabled
@@ -40,10 +43,21 @@ function render(state) {
     : "Paused";
 
   const error = state?.status?.lastError;
+  const lastSkippedAt = state?.status?.lastSkippedAt;
+  const lastPlayedAt = state?.status?.lastPlayedAt;
+  const skipIsLatest =
+    lastSkippedAt && (!lastPlayedAt || lastSkippedAt > lastPlayedAt);
+  const skipLabels = {
+    "browser-audio": "Chrome was already playing audio",
+    "recent-audio": "audio was playing recently",
+    "video-meeting": "video call detected",
+  };
   controls.details.classList.toggle("error", Boolean(error));
   controls.details.textContent = error
     ? `Audio error: ${error}`
-    : `Last signal: ${formatTime(state?.status?.lastPlayedAt)}`;
+    : skipIsLatest
+      ? `Skipped at ${formatTime(lastSkippedAt)} · ${skipLabels[state.status.lastSkipReason] ?? "smart mode"}`
+      : `Last signal: ${formatTime(lastPlayedAt)}`;
 }
 
 async function send(type, payload = {}) {
@@ -82,6 +96,14 @@ controls.interval.addEventListener("change", () => {
   void run(() =>
     send("UPDATE_SETTINGS", {
       settings: { intervalMinutes: Number(controls.interval.value) },
+    }),
+  );
+});
+
+controls.smartMode.addEventListener("change", () => {
+  void run(() =>
+    send("UPDATE_SETTINGS", {
+      settings: { smartMode: controls.smartMode.checked },
     }),
   );
 });

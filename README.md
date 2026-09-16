@@ -14,9 +14,12 @@ Manifest V3. Chrome 109 or newer is required.
   background process stops.
 - Offscreen Audio API for supported background playback in modern Chrome.
 - Saved enabled state, interval, volume, last successful signal, and errors.
+- Smart quiet mode skips the signal during browser audio and video calls.
+- A two-minute grace period avoids firing during short pauses between sounds.
+- Active wake-up audio stops immediately when a Chrome tab starts playing sound.
 - Automatic alarm repair whenever Chrome starts or the service worker wakes up.
 - Clear ON/OFF toolbar status and a popup for settings and manual testing.
-- No remote scripts, analytics, network requests, or browsing permissions.
+- No remote scripts, analytics, network requests, or access to page content.
 
 ## Installation
 
@@ -28,8 +31,8 @@ Manifest V3. Chrome 109 or newer is required.
 5. Select this repository's root folder.
 6. Pin the extension, open it, and click **Play a test signal**.
 
-The extension starts enabled with the original ten-minute interval and 100%
-signal level. Both values can be changed from the popup.
+The extension starts enabled with the original ten-minute interval, 100% signal
+level, and smart quiet mode. These values can be changed from the popup.
 
 > The volume slider only changes the bundled wake-up signal. Your system and
 > audio-interface volumes still determine the final output level.
@@ -42,9 +45,19 @@ lets Chrome release that document after playback. Chrome manages the alarm, and
 the settings live in extension storage, so both survive service-worker suspension
 and browser restarts.
 
+Before every automatic signal, smart quiet mode checks whether a non-muted Chrome
+tab is audible, whether audio stopped less than two minutes ago, or whether a
+meeting room is open in Google Meet, Microsoft Teams, Zoom, Webex, Jitsi Meet, or
+Whereby. If so, the signal is skipped. The popup explains why it was skipped.
+The manual **Play a test signal** button intentionally bypasses smart mode.
+
 The extension does not prevent the computer or display itself from sleeping. It
 only sends an audio signal intended to keep auto-standby speakers or studio
 monitors awake.
+
+Chrome does not expose the global macOS/Windows output level to extensions. Smart
+mode can therefore detect browser audio, but not audio produced only by native
+applications such as a DAW, Spotify desktop, or a desktop video-call app.
 
 ## Compatible monitors
 
@@ -65,6 +78,8 @@ chain. If another model works, submit a pull request or use the
 - Confirm that Chrome is routed to the same output as the monitors.
 - Increase the extension signal volume or shorten the interval if the monitors
   still enter standby.
+- Disable **Smart quiet mode** temporarily if you need the signal to run even
+  while Chrome is playing audio.
 - Laptop sleep suspends Chrome. The extension resumes when the browser and device
   wake; it cannot wake a sleeping computer.
 - After updating an unpacked copy, use the reload button on
@@ -79,16 +94,17 @@ npm test
 npm run validate
 ```
 
-`npm test` covers settings, alarm lifecycle, enable/disable behavior, and
-offscreen-document reuse. `npm run validate` checks the Manifest V3 package and
-all referenced assets. GitHub Actions runs both checks on pushes and pull
-requests.
+`npm test` covers settings, alarm lifecycle, enable/disable behavior, meeting and
+audible-tab detection, the post-audio grace period, and offscreen-document reuse.
+`npm run validate` checks the Manifest V3 package and all referenced assets.
+GitHub Actions runs both checks on pushes and pull requests.
 
 ## Privacy
 
 All code and assets are packaged locally. The extension stores only its settings
-and local playback status in `chrome.storage.local`. It does not collect or send
-any data and does not request access to websites, tabs, or browsing history.
+and local playback status in `chrome.storage.local`. The `tabs` permission is used
+to check the in-memory audible state and recognize supported meeting URLs. Page
+content is never read, URLs are never stored, and no data is collected or sent.
 
 ## Support
 

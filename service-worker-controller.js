@@ -8,6 +8,7 @@ import {
   iconPaths,
   normalizeSettings,
 } from "./lib/settings.js";
+import { detectBlockingActivity, isMeetingUrl } from "./lib/activity.js";
 
 export function createController(api, workerScope = globalThis) {
   let offscreenCreation = null;
@@ -114,6 +115,22 @@ export function createController(api, workerScope = globalThis) {
     }
 
     try {
+      if (!force && settings.smartMode) {
+        const status = await getStatus();
+        const activity = await detectBlockingActivity(api, status);
+
+        if (activity.blocked) {
+          await setStatus({
+            lastAudibleAt: activity.lastAudibleAt ?? status.lastAudibleAt,
+            lastError: null,
+            lastSkippedAt: Date.now(),
+            lastSkipReason: activity.reason,
+          });
+          await stopSignal();
+          return { ok: true, skipped: true, reason: activity.reason };
+        }
+      }
+
       await ensureOffscreenDocument();
       const response = await api.runtime.sendMessage({
         target: "offscreen",
@@ -191,6 +208,26 @@ export function createController(api, workerScope = globalThis) {
     return playSignal();
   }
 
+  async function handleTabUpdated(changeInfo, tab) {
+    const settings = await getSettings();
+    if (!settings.enabled || !settings.smartMode) {
+      return;
+    }
+
+    const audibleStarted =
+      changeInfo.audible === true && !tab.mutedInfo?.muted;
+    const meetingOpened =
+      typeof changeInfo.url === "string" && isMeetingUrl(tab.url);
+
+    if (audibleStarted) {
+      await setStatus({ lastAudibleAt: Date.now() });
+    }
+
+    if (audibleStarted || meetingOpened) {
+      await stopSignal();
+    }
+  }
+
   async function handleMessage(message) {
     switch (message?.type) {
       case "GET_STATE":
@@ -230,6 +267,7 @@ export function createController(api, workerScope = globalThis) {
     getState,
     handleAlarm,
     handleMessage,
+    handleTabUpdated,
     initialize,
     reconcile,
   };

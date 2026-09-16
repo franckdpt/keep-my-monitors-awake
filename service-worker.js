@@ -14,6 +14,12 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   void controller.handleAlarm(alarm);
 });
 
+chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
+  if (typeof changeInfo.audible === "boolean" || changeInfo.url) {
+    void controller.handleTabUpdated(changeInfo, tab);
+  }
+});
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.target !== "service-worker") {
     return false;

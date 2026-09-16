@@ -12,6 +12,8 @@ function createChromeMock(initialStorage = {}) {
     createDocument: 0,
     messages: [],
   };
+  let audibleTabs = [];
+  let meetingTabs = [];
   let offscreenOpen = false;
 
   const api = {
@@ -52,9 +54,24 @@ function createChromeMock(initialStorage = {}) {
         set: async (value) => Object.assign(data, structuredClone(value)),
       },
     },
+    tabs: {
+      query: async (queryInfo) =>
+        structuredClone(queryInfo.audible ? audibleTabs : meetingTabs),
+    },
   };
 
-  return { alarms, api, calls, data };
+  return {
+    alarms,
+    api,
+    calls,
+    data,
+    setAudibleTabs: (tabs) => {
+      audibleTabs = tabs;
+    },
+    setMeetingTabs: (tabs) => {
+      meetingTabs = tabs;
+    },
+  };
 }
 
 test("initialize stores defaults and creates a ten-minute alarm", async () => {
@@ -66,6 +83,7 @@ test("initialize stores defaults and creates a ten-minute alarm", async () => {
   assert.deepEqual(mock.data[SETTINGS_KEY], {
     enabled: true,
     intervalMinutes: 10,
+    smartMode: true,
     volume: 1,
   });
   assert.equal(mock.alarms.get(ALARM_NAME).periodInMinutes, 10);
@@ -115,4 +133,82 @@ test("the named alarm plays through one reusable offscreen document", async () =
   assert.equal(mock.calls.messages.length, 2);
   assert.equal(mock.data.status.lastError, null);
   assert.equal(typeof mock.data.status.lastPlayedAt, "number");
+});
+
+test("smart mode skips scheduled playback while a browser tab is audible", async () => {
+  const mock = createChromeMock();
+  const controller = createController(mock.api);
+  await controller.initialize();
+  mock.setAudibleTabs([{ audible: true, mutedInfo: { muted: false } }]);
+
+  const result = await controller.handleAlarm({ name: ALARM_NAME });
+
+  assert.deepEqual(result, {
+    ok: true,
+    skipped: true,
+    reason: "browser-audio",
+  });
+  assert.equal(mock.calls.createDocument, 0);
+  assert.equal(mock.data.status.lastSkipReason, "browser-audio");
+  assert.equal(typeof mock.data.status.lastAudibleAt, "number");
+});
+
+test("smart mode skips scheduled playback on a video meeting page", async () => {
+  const mock = createChromeMock();
+  const controller = createController(mock.api);
+  await controller.initialize();
+  mock.setMeetingTabs([
+    { discarded: false, url: "https://meet.google.com/abc-defg-hij" },
+  ]);
+
+  const result = await controller.handleAlarm({ name: ALARM_NAME });
+
+  assert.equal(result.skipped, true);
+  assert.equal(result.reason, "video-meeting");
+  assert.equal(mock.calls.createDocument, 0);
+});
+
+test("manual test playback bypasses smart mode", async () => {
+  const mock = createChromeMock();
+  const controller = createController(mock.api);
+  await controller.initialize();
+  mock.setAudibleTabs([{ audible: true, mutedInfo: { muted: false } }]);
+
+  const state = await controller.handleMessage({ type: "PLAY_NOW" });
+
+  assert.equal(mock.calls.createDocument, 1);
+  assert.equal(state.status.lastError, null);
+  assert.equal(typeof state.status.lastPlayedAt, "number");
+});
+
+test("disabling smart mode restores unconditional scheduled playback", async () => {
+  const mock = createChromeMock();
+  const controller = createController(mock.api);
+  await controller.initialize();
+  mock.setAudibleTabs([{ audible: true, mutedInfo: { muted: false } }]);
+  await controller.handleMessage({
+    type: "UPDATE_SETTINGS",
+    settings: { smartMode: false },
+  });
+
+  const result = await controller.handleAlarm({ name: ALARM_NAME });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.skipped, undefined);
+  assert.equal(mock.calls.createDocument, 1);
+});
+
+test("new browser audio immediately stops an active wake-up signal", async () => {
+  const mock = createChromeMock();
+  const controller = createController(mock.api);
+  await controller.initialize({ playImmediately: true });
+
+  await controller.handleTabUpdated(
+    { audible: true },
+    { mutedInfo: { muted: false } },
+  );
+
+  assert.equal(mock.calls.closeDocument, 1);
+  assert.equal(mock.calls.messages.at(-1).type, "STOP_SIGNAL");
+  assert.equal(typeof mock.data.status.lastAudibleAt, "number");
 });
