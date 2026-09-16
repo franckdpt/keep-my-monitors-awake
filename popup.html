@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Keep My Monitors Awake</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <img src="images/awake-logo-on48.png" width="40" height="40" alt="" />
+        <div>
+          <h1>Keep My Monitors Awake</h1>
+          <p id="summary" class="summary" aria-live="polite">Loading…</p>
+        </div>
+      </header>
+
+      <section class="card primary-control">
+        <div>
+          <strong>Wake-up signal</strong>
+          <span>Play it automatically in the background</span>
+        </div>
+        <label class="switch">
+          <input id="enabled" type="checkbox" aria-label="Enable wake-up signal" />
+          <span class="slider"></span>
+        </label>
+      </section>
+
+      <section class="card settings">
+        <label for="interval">Interval</label>
+        <select id="interval">
+          <option value="1">Every minute</option>
+          <option value="5">Every 5 minutes</option>
+          <option value="10">Every 10 minutes</option>
+          <option value="15">Every 15 minutes</option>
+          <option value="30">Every 30 minutes</option>
+          <option value="60">Every hour</option>
+        </select>
+
+        <div class="volume-label">
+          <label for="volume">Signal volume</label>
+          <output id="volume-value" for="volume">100%</output>
+        </div>
+        <input id="volume" type="range" min="5" max="100" step="5" value="100" />
+      </section>
+
+      <button id="test" class="test-button" type="button">Play a test signal</button>
+      <p id="details" class="details" aria-live="polite"></p>
+    </main>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

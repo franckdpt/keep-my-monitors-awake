@@ -1,26 +1,33 @@
 {
-	"manifest_version": 2,
-	"name": "Keep My Monitors Awake",
-	"version": "1.0",
-	"description": "A simple extension to prevent your monitors from going to sleep.",
-	"author": "Franck Dupont",
-	"icons": {
-		"16": "/images/awake-logo-on16.png",
-      	"32": "/images/awake-logo-on32.png",
-      	"48": "/images/awake-logo-on48.png",
-      	"128": "/images/awake-logo-on128.png"
-	},
-	"background": {
-	    "scripts": ["background.js"],
-	    "persistent": true
-	},
-	"browser_action": {
+  "manifest_version": 3,
+  "name": "Keep My Monitors Awake",
+  "version": "2.0.0",
+  "description": "Keeps active studio monitors awake by playing a periodic low-frequency signal.",
+  "author": "Franck Dupont",
+  "minimum_chrome_version": "109",
+  "permissions": [
+    "alarms",
+    "offscreen",
+    "storage"
+  ],
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  },
+  "action": {
     "default_icon": {
-    	"16": "/images/awake-logo-on16.png",
-      	"32": "/images/awake-logo-on32.png",
-      	"48": "/images/awake-logo-on48.png",
-      	"128": "/images/awake-logo-on128.png"
+      "16": "images/awake-logo-on16.png",
+      "32": "images/awake-logo-on32.png",
+      "48": "images/awake-logo-on48.png",
+      "128": "images/awake-logo-on128.png"
     },
+    "default_popup": "popup.html",
     "default_title": "Keep My Monitors Awake"
+  },
+  "icons": {
+    "16": "images/awake-logo-on16.png",
+    "32": "images/awake-logo-on32.png",
+    "48": "images/awake-logo-on48.png",
+    "128": "images/awake-logo-on128.png"
   }
 }

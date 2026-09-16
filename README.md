@@ -1,59 +1,108 @@
 # Keep My Monitors Awake
 
-**Keep My Monitors Awake** is a simple browser extension for Chromium browsers based (Google Chrome, Brave...), and Firefox browser that prevents your monitors from going to sleep. 
+Keep My Monitors Awake is a lightweight Chrome extension that prevents active
+studio monitors from entering standby. It periodically plays a local
+low-frequency signal through the selected system audio output.
 
-If you've ever been frustrated by your monitors going to sleep in the middle of a project or while you're listening to music, Keep My Monitors Awake is the solution you've been looking for.
+The extension is built for **Google Chrome and Chromium-based browsers** using
+Manifest V3. Chrome 109 or newer is required.
 
-## How it works
+## Why version 2 is more reliable
 
-Keep My Monitors Awake uses a simple but effective method to prevent your monitors from going to sleep. The extension periodically sends an inaudible audio signal to your monitors, which keeps them awake.
+- Manifest V3 service worker instead of the retired persistent background page.
+- Chrome Alarms API instead of an in-memory timer that disappears when the
+  background process stops.
+- Offscreen Audio API for supported background playback in modern Chrome.
+- Saved enabled state, interval, volume, last successful signal, and errors.
+- Automatic alarm repair whenever Chrome starts or the service worker wakes up.
+- Clear ON/OFF toolbar status and a popup for settings and manual testing.
+- No remote scripts, analytics, network requests, or browsing permissions.
 
 ## Installation
 
-You can install the extension by following these steps:
+1. Download or clone this repository.
+2. Open `chrome://extensions/` in Chrome, Brave, Edge, or another compatible
+   Chromium browser.
+3. Enable **Developer mode**.
+4. Click **Load unpacked**.
+5. Select this repository's root folder.
+6. Pin the extension, open it, and click **Play a test signal**.
 
-1. Download this repository and unzip it.
-2. Open your browser (Chromium based or Firefox).
-3. Go to: **[chrome://extensions/](chrome://extensions/)** (for Chromium users) or **[brave://extensions/](brave://extensions/)** (for Brave users) or **[about:debugging#/runtime/this-firefox](about:debugging#/runtime/this-firefox)** (for Firefox users)
-4. (Only for Chromium based browsers) Turn ON the **"Developer mode"** (the right-top button).
-4. Click the **"Load unpacked"** (Chromium) or **"Load Temporary Add-on"** button (Firefox).
-5. Select the folder **keep-my-monitors-awake** you unzipped at first step (Chromium), or the manifest.json file (Firefox). 
+The extension starts enabled with the original ten-minute interval and 100%
+signal level. Both values can be changed from the popup.
 
-Make sure the extension is running by checking the ON/OFF button.
+> The volume slider only changes the bundled wake-up signal. Your system and
+> audio-interface volumes still determine the final output level.
 
-## Usage
+## How it works
 
-Once the extension is installed, it works automatically in the background. You don't need to do anything else.
+Chrome wakes the extension service worker on a scheduled alarm. The worker opens
+a short-lived offscreen document, asks it to play the bundled `tone.wav`, then
+lets Chrome release that document after playback. Chrome manages the alarm, and
+the settings live in extension storage, so both survive service-worker suspension
+and browser restarts.
 
-## Enable / Disable the extension
+The extension does not prevent the computer or display itself from sleeping. It
+only sends an audio signal intended to keep auto-standby speakers or studio
+monitors awake.
 
-You can enable / disable the extension by simply clicking on the extension icon in the top taskbar (if pinned). When the extension is enabled, the icon is in black. When the extension is disabled, the icon is in grey.
+## Compatible monitors
 
-By enabling or disabling the extension, you can easily control whether the audio signals are being sent to your monitors or not. This can be useful if you need silence for a certain period of time or if you want to save energy by disabling the extension for a while.
-
-## Compatible Monitors
-
-Keep My Monitors Awake works with a variety of monitors, including:
+The signal has been used with:
 
 - KRK Rokit G3 (RP5, RP7, RP8, RP10)
 - KRK Rokit G4 (RP5, RP7, RP8, RP10)
 - Focal Alpha (50, 65, 80)
-- ...
 
-Actually, I think the extension works for any monitor.
+Compatibility depends on the monitor's standby threshold and the complete audio
+chain. If another model works, submit a pull request or use the
+[compatibility form](https://tally.so/r/31XyNl).
 
-👉 If you have a monitor that is not on this list but you have tested it with the extension and it works, please submit a pull request or fill **[this form](https://tally.so/r/31XyNl)** to have it added to the list.
+## Troubleshooting
 
+- Use **Play a test signal** and check that **Last signal** updates without an
+  audio error.
+- Confirm that Chrome is routed to the same output as the monitors.
+- Increase the extension signal volume or shorten the interval if the monitors
+  still enter standby.
+- Laptop sleep suspends Chrome. The extension resumes when the browser and device
+  wake; it cannot wake a sleeping computer.
+- After updating an unpacked copy, use the reload button on
+  `chrome://extensions/`.
+
+## Development
+
+The project has no runtime or development dependencies beyond Node.js 20+.
+
+```bash
+npm test
+npm run validate
+```
+
+`npm test` covers settings, alarm lifecycle, enable/disable behavior, and
+offscreen-document reuse. `npm run validate` checks the Manifest V3 package and
+all referenced assets. GitHub Actions runs both checks on pushes and pull
+requests.
+
+## Privacy
+
+All code and assets are packaged locally. The extension stores only its settings
+and local playback status in `chrome.storage.local`. It does not collect or send
+any data and does not request access to websites, tabs, or browsing history.
 
 ## Support
 
-💡 If you have any issues with the extension or if you have any suggestions for how we can improve it, please submit an issue on [this GitHub repo](https://github.com/franckdpt/keep-my-monitors-awake/issues).
+Please report problems or suggestions in the
+[GitHub issue tracker](https://github.com/franckdpt/keep-my-monitors-awake/issues).
 
 ## Donation
-❤️ Your offered coffees are the finest ☕️
 
-- With **[dollars](https://tally.so/r/w8qy6P)**
-- With Ethereum or Polygon : **0x5180C7aBA0057aD28827b37E57130EC8fA591559**
+If this extension helps you, you can offer a coffee:
+
+- [Donate in dollars](https://tally.so/r/w8qy6P)
+- Ethereum or Polygon: `0x5180C7aBA0057aD28827b37E57130EC8fA591559`
 
 ## Credits
-Thank you @stuartdochertymusic for creating the sound asset [https://github.com/stuartdochertymusic/KRK_stayawake](https://github.com/stuartdochertymusic/KRK_stayawake)
+
+The sound asset is based on
+[KRK_stayawake by @stuartdochertymusic](https://github.com/stuartdochertymusic/KRK_stayawake).

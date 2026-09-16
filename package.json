@@ -1,0 +1,13 @@
+{
+  "name": "keep-my-monitors-awake",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "validate": "node scripts/validate-extension.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

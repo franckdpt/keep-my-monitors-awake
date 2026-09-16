@@ -1,0 +1,236 @@
+import {
+  ALARM_NAME,
+  DEFAULT_SETTINGS,
+  DEFAULT_STATUS,
+  OFFSCREEN_PATH,
+  SETTINGS_KEY,
+  STATUS_KEY,
+  iconPaths,
+  normalizeSettings,
+} from "./lib/settings.js";
+
+export function createController(api, workerScope = globalThis) {
+  let offscreenCreation = null;
+
+  async function getSettings() {
+    const stored = await api.storage.local.get(SETTINGS_KEY);
+    return normalizeSettings(stored[SETTINGS_KEY]);
+  }
+
+  async function getStatus() {
+    const stored = await api.storage.local.get(STATUS_KEY);
+    return { ...DEFAULT_STATUS, ...stored[STATUS_KEY] };
+  }
+
+  async function saveSettings(patch) {
+    const settings = normalizeSettings({ ...(await getSettings()), ...patch });
+    await api.storage.local.set({ [SETTINGS_KEY]: settings });
+    return settings;
+  }
+
+  async function setStatus(patch) {
+    const status = { ...(await getStatus()), ...patch };
+    await api.storage.local.set({ [STATUS_KEY]: status });
+    return status;
+  }
+
+  async function updateAction(settings) {
+    const stateLabel = settings.enabled ? "Active" : "Paused";
+
+    await Promise.all([
+      api.action.setIcon({ path: iconPaths(settings.enabled) }),
+      api.action.setTitle({
+        title: `Keep My Monitors Awake — ${stateLabel}`,
+      }),
+      api.action.setBadgeText({ text: settings.enabled ? "ON" : "OFF" }),
+      api.action.setBadgeBackgroundColor({
+        color: settings.enabled ? "#16845b" : "#6b7280",
+      }),
+    ]);
+  }
+
+  async function ensureAlarm(settings) {
+    if (!settings.enabled) {
+      await api.alarms.clear(ALARM_NAME);
+      return null;
+    }
+
+    const existingAlarm = await api.alarms.get(ALARM_NAME);
+    if (existingAlarm?.periodInMinutes === settings.intervalMinutes) {
+      return existingAlarm;
+    }
+
+    await api.alarms.create(ALARM_NAME, {
+      delayInMinutes: settings.intervalMinutes,
+      periodInMinutes: settings.intervalMinutes,
+    });
+
+    return api.alarms.get(ALARM_NAME);
+  }
+
+  async function hasOffscreenDocument() {
+    const offscreenUrl = api.runtime.getURL(OFFSCREEN_PATH);
+
+    if (typeof api.runtime.getContexts === "function") {
+      const contexts = await api.runtime.getContexts({
+        contextTypes: ["OFFSCREEN_DOCUMENT"],
+        documentUrls: [offscreenUrl],
+      });
+      return contexts.length > 0;
+    }
+
+    const clients = await workerScope.clients.matchAll({
+      includeUncontrolled: true,
+      type: "window",
+    });
+    return clients.some((client) => client.url === offscreenUrl);
+  }
+
+  async function ensureOffscreenDocument() {
+    if (await hasOffscreenDocument()) {
+      return;
+    }
+
+    if (!offscreenCreation) {
+      offscreenCreation = api.offscreen
+        .createDocument({
+          url: OFFSCREEN_PATH,
+          reasons: ["AUDIO_PLAYBACK"],
+          justification:
+            "Play the periodic local signal that keeps connected monitors awake.",
+        })
+        .finally(() => {
+          offscreenCreation = null;
+        });
+    }
+
+    await offscreenCreation;
+  }
+
+  async function playSignal({ force = false } = {}) {
+    const settings = await getSettings();
+    if (!force && !settings.enabled) {
+      return { ok: false, skipped: true };
+    }
+
+    try {
+      await ensureOffscreenDocument();
+      const response = await api.runtime.sendMessage({
+        target: "offscreen",
+        type: "PLAY_SIGNAL",
+        volume: settings.volume,
+      });
+
+      if (!response?.ok) {
+        throw new Error(response?.error || "The audio document did not respond.");
+      }
+
+      await setStatus({ lastPlayedAt: Date.now(), lastError: null });
+      return { ok: true };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await setStatus({ lastError: message });
+      return { ok: false, error: message };
+    }
+  }
+
+  async function stopSignal() {
+    if (!(await hasOffscreenDocument())) {
+      return;
+    }
+
+    try {
+      await api.runtime.sendMessage({
+        target: "offscreen",
+        type: "STOP_SIGNAL",
+      });
+    } finally {
+      await api.offscreen.closeDocument();
+    }
+  }
+
+  async function getState() {
+    const [settings, status, alarm] = await Promise.all([
+      getSettings(),
+      getStatus(),
+      api.alarms.get(ALARM_NAME),
+    ]);
+
+    return {
+      ok: true,
+      settings,
+      status,
+      nextSignalAt: settings.enabled ? alarm?.scheduledTime ?? null : null,
+    };
+  }
+
+  async function reconcile() {
+    const stored = await api.storage.local.get(SETTINGS_KEY);
+    const settings = normalizeSettings(stored[SETTINGS_KEY]);
+
+    if (!stored[SETTINGS_KEY]) {
+      await api.storage.local.set({ [SETTINGS_KEY]: DEFAULT_SETTINGS });
+    }
+
+    await Promise.all([updateAction(settings), ensureAlarm(settings)]);
+    return settings;
+  }
+
+  async function initialize({ playImmediately = false } = {}) {
+    const settings = await reconcile();
+    if (playImmediately && settings.enabled) {
+      await playSignal();
+    }
+    return getState();
+  }
+
+  async function handleAlarm(alarm) {
+    if (alarm.name !== ALARM_NAME) {
+      return { ok: false, skipped: true };
+    }
+    return playSignal();
+  }
+
+  async function handleMessage(message) {
+    switch (message?.type) {
+      case "GET_STATE":
+        return getState();
+
+      case "SET_ENABLED": {
+        const settings = await saveSettings({ enabled: Boolean(message.enabled) });
+        await updateAction(settings);
+
+        if (settings.enabled) {
+          await ensureAlarm(settings);
+          await playSignal();
+        } else {
+          await api.alarms.clear(ALARM_NAME);
+          await stopSignal();
+        }
+
+        return getState();
+      }
+
+      case "UPDATE_SETTINGS": {
+        const settings = await saveSettings(message.settings ?? {});
+        await Promise.all([updateAction(settings), ensureAlarm(settings)]);
+        return getState();
+      }
+
+      case "PLAY_NOW":
+        await playSignal({ force: true });
+        return getState();
+
+      default:
+        return { ok: false, error: "Unknown message." };
+    }
+  }
+
+  return {
+    getState,
+    handleAlarm,
+    handleMessage,
+    initialize,
+    reconcile,
+  };
+}
