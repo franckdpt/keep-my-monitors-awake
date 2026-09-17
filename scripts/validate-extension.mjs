@@ -16,7 +16,7 @@ if (manifest.version !== packageJson.version) {
   throw new Error("manifest.json and package.json versions must match.");
 }
 
-for (const permission of ["alarms", "offscreen", "storage", "tabs"]) {
+for (const permission of ["alarms", "idle", "offscreen", "storage", "tabs"]) {
   if (!manifest.permissions?.includes(permission)) {
     throw new Error(`manifest.json is missing the ${permission} permission.`);
   }

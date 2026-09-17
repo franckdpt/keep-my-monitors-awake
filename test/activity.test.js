@@ -4,8 +4,26 @@ import test from "node:test";
 import {
   AUDIO_GRACE_PERIOD_MS,
   detectBlockingActivity,
+  detectUserPresence,
   isMeetingUrl,
+  PRESENCE_RETURN_GRACE_MS,
 } from "../lib/activity.js";
+
+function createActivityApi({
+  audibleTabs = [],
+  idleState = "active",
+  meetingTabs = [],
+} = {}) {
+  return {
+    idle: {
+      queryState: (_threshold, callback) => callback(idleState),
+    },
+    runtime: {},
+    tabs: {
+      query: async (query) => query.audible ? audibleTabs : meetingTabs,
+    },
+  };
+}
 
 test("isMeetingUrl recognizes active meeting routes without matching home pages", () => {
   const meetingUrls = [
@@ -29,21 +47,19 @@ test("isMeetingUrl recognizes active meeting routes without matching home pages"
 });
 
 test("detectBlockingActivity ignores muted tabs", async () => {
-  const api = {
-    tabs: {
-      query: async (query) =>
-        query.audible ? [{ audible: true, mutedInfo: { muted: true } }] : [],
-    },
-  };
+  const api = createActivityApi({
+    audibleTabs: [{ audible: true, mutedInfo: { muted: true } }],
+  });
 
   assert.deepEqual(await detectBlockingActivity(api, {}, 10_000), {
     blocked: false,
     reason: null,
+    statusPatch: { activeSince: null, systemState: "active" },
   });
 });
 
 test("detectBlockingActivity keeps a grace period after browser audio", async () => {
-  const api = { tabs: { query: async () => [] } };
+  const api = createActivityApi();
   const now = 1_000_000;
 
   assert.deepEqual(
@@ -52,7 +68,11 @@ test("detectBlockingActivity keeps a grace period after browser audio", async ()
       { lastAudibleAt: now - AUDIO_GRACE_PERIOD_MS + 1 },
       now,
     ),
-    { blocked: true, reason: "recent-audio" },
+    {
+      blocked: true,
+      reason: "recent-audio",
+      statusPatch: { activeSince: null, systemState: "active" },
+    },
   );
   assert.deepEqual(
     await detectBlockingActivity(
@@ -60,6 +80,74 @@ test("detectBlockingActivity keeps a grace period after browser audio", async ()
       { lastAudibleAt: now - AUDIO_GRACE_PERIOD_MS },
       now,
     ),
-    { blocked: false, reason: null },
+    {
+      blocked: false,
+      reason: null,
+      statusPatch: { activeSince: null, systemState: "active" },
+    },
   );
+});
+
+test("presence detection fails closed while idle, locked, or unavailable", async () => {
+  for (const [idleState, reason] of [
+    ["idle", "user-idle"],
+    ["locked", "session-locked"],
+    ["unexpected", "presence-unknown"],
+  ]) {
+    const result = await detectUserPresence(
+      createActivityApi({ idleState }),
+      {},
+      10_000,
+    );
+
+    assert.equal(result.blocked, true);
+    assert.equal(result.reason, reason);
+  }
+});
+
+test("presence detection waits after the user returns", async () => {
+  const now = 1_000_000;
+  const api = createActivityApi();
+
+  assert.equal(
+    (await detectUserPresence(
+      api,
+      { activeSince: now - PRESENCE_RETURN_GRACE_MS + 1 },
+      now,
+    )).reason,
+    "return-grace",
+  );
+  assert.equal(
+    (await detectUserPresence(
+      api,
+      { activeSince: now - PRESENCE_RETURN_GRACE_MS },
+      now,
+    )).blocked,
+    false,
+  );
+});
+
+test("presence detection infers a return if the state event was missed", async () => {
+  const now = 1_000_000;
+  const result = await detectUserPresence(
+    createActivityApi(),
+    { activeSince: null, systemState: "idle" },
+    now,
+  );
+
+  assert.equal(result.blocked, true);
+  assert.equal(result.reason, "return-grace");
+  assert.equal(result.statusPatch.activeSince, now);
+});
+
+test("presence detection blocks when the idle API fails", async () => {
+  const api = createActivityApi();
+  api.idle.queryState = () => {
+    throw new Error("idle service unavailable");
+  };
+
+  const result = await detectUserPresence(api, {}, 10_000);
+
+  assert.equal(result.blocked, true);
+  assert.equal(result.reason, "presence-unknown");
 });

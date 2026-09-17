@@ -15,6 +15,11 @@ Manifest V3. Chrome 109 or newer is required.
 - Offscreen Audio API for supported background playback in modern Chrome.
 - Saved enabled state, interval, volume, last successful signal, and errors.
 - Smart quiet mode skips the signal during browser audio and video calls.
+- Presence detection stops signals after 60 seconds without keyboard or mouse
+  activity, whenever the computer is locked, and for one minute after return.
+- Presence checks fail closed: if Chrome cannot confirm activity, no signal plays.
+- Delayed alarms are discarded after sleep, and browser startup or extension
+  updates never trigger an immediate signal.
 - A two-minute grace period avoids firing during short pauses between sounds.
 - Active wake-up audio stops immediately when a Chrome tab starts playing sound.
 - Hardware Play/Pause keys never control or restart the wake-up signal.
@@ -47,11 +52,14 @@ lets Chrome release that document after playback. Chrome manages the alarm, and
 the settings live in extension storage, so both survive service-worker suspension
 and browser restarts.
 
-Before every automatic signal, smart quiet mode checks whether a non-muted Chrome
-tab is audible, whether audio stopped less than two minutes ago, or whether a
-meeting room is open in Google Meet, Microsoft Teams, Zoom, Webex, Jitsi Meet, or
-Whereby. If so, the signal is skipped. The popup explains why it was skipped.
-The manual **Play a test signal** button intentionally bypasses smart mode.
+Before every automatic signal, smart quiet mode first confirms recent system
+activity through Chrome's Idle API. It stops immediately when the computer is
+idle or locked and waits one minute after activity resumes. It then checks
+whether a non-muted Chrome tab is audible, whether audio stopped less than two
+minutes ago, or whether a meeting room is open in Google Meet, Microsoft Teams,
+Zoom, Webex, Jitsi Meet, or Whereby. If any check is uncertain or blocked, the
+signal is skipped. The popup explains why it was skipped. The manual **Play a
+test signal** button intentionally bypasses smart mode.
 
 The extension does not prevent the computer or display itself from sleeping. It
 only sends an audio signal intended to keep auto-standby speakers or studio

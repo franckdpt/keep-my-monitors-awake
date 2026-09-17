@@ -49,7 +49,12 @@ function render(state) {
     lastSkippedAt && (!lastPlayedAt || lastSkippedAt > lastPlayedAt);
   const skipLabels = {
     "browser-audio": "Chrome was already playing audio",
+    "presence-unknown": "presence could not be confirmed",
     "recent-audio": "audio was playing recently",
+    "return-grace": "waiting after your return",
+    "session-locked": "computer is locked",
+    "system-resume": "a delayed sleep alarm was discarded",
+    "user-idle": "no recent keyboard or mouse activity",
     "video-meeting": "video call detected",
   };
   controls.details.classList.toggle("error", Boolean(error));

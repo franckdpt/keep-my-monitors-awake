@@ -8,7 +8,13 @@ import {
   iconPaths,
   normalizeSettings,
 } from "./lib/settings.js";
-import { detectBlockingActivity, isMeetingUrl } from "./lib/activity.js";
+import {
+  detectBlockingActivity,
+  isMeetingUrl,
+  MISSED_ALARM_TOLERANCE_MS,
+  PRESENCE_IDLE_THRESHOLD_SECONDS,
+  SKIP_REASONS,
+} from "./lib/activity.js";
 
 export function createController(api, workerScope = globalThis) {
   let offscreenCreation = null;
@@ -110,6 +116,7 @@ export function createController(api, workerScope = globalThis) {
 
   async function playSignal({ force = false } = {}) {
     const settings = await getSettings();
+    let activityStatus = {};
     if (!force && !settings.enabled) {
       return { ok: false, skipped: true };
     }
@@ -118,10 +125,16 @@ export function createController(api, workerScope = globalThis) {
       if (!force && settings.smartMode) {
         const status = await getStatus();
         const activity = await detectBlockingActivity(api, status);
+        activityStatus = {
+          ...(activity.statusPatch ?? {}),
+          ...(Number.isFinite(activity.lastAudibleAt)
+            ? { lastAudibleAt: activity.lastAudibleAt }
+            : {}),
+        };
 
         if (activity.blocked) {
           await setStatus({
-            lastAudibleAt: activity.lastAudibleAt ?? status.lastAudibleAt,
+            ...activityStatus,
             lastError: null,
             lastSkippedAt: Date.now(),
             lastSkipReason: activity.reason,
@@ -142,7 +155,11 @@ export function createController(api, workerScope = globalThis) {
         throw new Error(response?.error || "The audio document did not respond.");
       }
 
-      await setStatus({ lastPlayedAt: Date.now(), lastError: null });
+      await setStatus({
+        ...(activityStatus ?? {}),
+        lastPlayedAt: Date.now(),
+        lastError: null,
+      });
       return { ok: true };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -198,6 +215,7 @@ export function createController(api, workerScope = globalThis) {
       await api.storage.local.set({ [SETTINGS_KEY]: DEFAULT_SETTINGS });
     }
 
+    api.idle.setDetectionInterval(PRESENCE_IDLE_THRESHOLD_SECONDS);
     await Promise.all([updateAction(settings), ensureAlarm(settings)]);
     return settings;
   }
@@ -214,6 +232,23 @@ export function createController(api, workerScope = globalThis) {
     if (alarm.name !== ALARM_NAME) {
       return { ok: false, skipped: true };
     }
+
+    if (
+      Number.isFinite(alarm.scheduledTime) &&
+      Date.now() - alarm.scheduledTime > MISSED_ALARM_TOLERANCE_MS
+    ) {
+      await setStatus({
+        lastError: null,
+        lastSkippedAt: Date.now(),
+        lastSkipReason: SKIP_REASONS.SYSTEM_RESUME,
+      });
+      return {
+        ok: true,
+        skipped: true,
+        reason: SKIP_REASONS.SYSTEM_RESUME,
+      };
+    }
+
     return playSignal();
   }
 
@@ -233,6 +268,24 @@ export function createController(api, workerScope = globalThis) {
     }
 
     if (audibleStarted || meetingOpened) {
+      await stopSignal();
+    }
+  }
+
+  async function handleIdleStateChanged(newState) {
+    const status = await getStatus();
+    const isActive = newState === "active";
+    await setStatus({
+      systemState: newState,
+      activeSince:
+        isActive && status.systemState !== "active"
+          ? Date.now()
+          : isActive
+            ? status.activeSince
+            : null,
+    });
+
+    if (!isActive) {
       await stopSignal();
     }
   }
@@ -279,6 +332,7 @@ export function createController(api, workerScope = globalThis) {
   return {
     getState,
     handleAlarm,
+    handleIdleStateChanged,
     handleMessage,
     handleTabUpdated,
     initialize,

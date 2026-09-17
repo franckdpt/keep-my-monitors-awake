@@ -10,9 +10,11 @@ function createChromeMock(initialStorage = {}) {
   const calls = {
     closeDocument: 0,
     createDocument: 0,
+    idleIntervals: [],
     messages: [],
   };
   let audibleTabs = [];
+  let idleState = "active";
   let meetingTabs = [];
   let offscreenOpen = false;
 
@@ -29,6 +31,10 @@ function createChromeMock(initialStorage = {}) {
         alarms.set(name, { name, scheduledTime: Date.now() + 1000, ...details });
       },
       get: async (name) => alarms.get(name),
+    },
+    idle: {
+      queryState: (_threshold, callback) => callback(idleState),
+      setDetectionInterval: (seconds) => calls.idleIntervals.push(seconds),
     },
     offscreen: {
       closeDocument: async () => {
@@ -68,6 +74,9 @@ function createChromeMock(initialStorage = {}) {
     setAudibleTabs: (tabs) => {
       audibleTabs = tabs;
     },
+    setIdleState: (state) => {
+      idleState = state;
+    },
     setMeetingTabs: (tabs) => {
       meetingTabs = tabs;
     },
@@ -88,6 +97,7 @@ test("initialize stores defaults and creates a ten-minute alarm", async () => {
   });
   assert.equal(mock.alarms.get(ALARM_NAME).periodInMinutes, 10);
   assert.equal(state.settings.enabled, true);
+  assert.deepEqual(mock.calls.idleIntervals, [60]);
 });
 
 test("disabling clears the alarm and closes active audio", async () => {
@@ -135,6 +145,25 @@ test("the named alarm plays through one reusable offscreen document", async () =
   assert.equal(typeof mock.data.status.lastPlayedAt, "number");
 });
 
+test("a delayed alarm from system sleep is discarded", async () => {
+  const mock = createChromeMock();
+  const controller = createController(mock.api);
+  await controller.initialize();
+
+  const result = await controller.handleAlarm({
+    name: ALARM_NAME,
+    scheduledTime: Date.now() - 61_000,
+  });
+
+  assert.deepEqual(result, {
+    ok: true,
+    skipped: true,
+    reason: "system-resume",
+  });
+  assert.equal(mock.calls.createDocument, 0);
+  assert.equal(mock.data.status.lastSkipReason, "system-resume");
+});
+
 test("a finished signal closes the offscreen document without replaying it", async () => {
   const mock = createChromeMock();
   const controller = createController(mock.api);
@@ -164,6 +193,51 @@ test("smart mode skips scheduled playback while a browser tab is audible", async
   assert.equal(mock.calls.createDocument, 0);
   assert.equal(mock.data.status.lastSkipReason, "browser-audio");
   assert.equal(typeof mock.data.status.lastAudibleAt, "number");
+});
+
+test("smart mode fails closed while the computer is idle", async () => {
+  const mock = createChromeMock();
+  const controller = createController(mock.api);
+  await controller.initialize();
+  mock.setIdleState("idle");
+
+  const result = await controller.handleAlarm({ name: ALARM_NAME });
+
+  assert.deepEqual(result, {
+    ok: true,
+    skipped: true,
+    reason: "user-idle",
+  });
+  assert.equal(mock.calls.createDocument, 0);
+  assert.equal(mock.data.status.systemState, "idle");
+});
+
+test("returning from idle waits before automatic playback resumes", async () => {
+  const mock = createChromeMock();
+  const controller = createController(mock.api);
+  await controller.initialize();
+
+  await controller.handleIdleStateChanged("idle");
+  await controller.handleIdleStateChanged("active");
+  const result = await controller.handleAlarm({ name: ALARM_NAME });
+
+  assert.equal(result.skipped, true);
+  assert.equal(result.reason, "return-grace");
+  assert.equal(mock.calls.createDocument, 0);
+  assert.equal(mock.data.status.systemState, "active");
+  assert.equal(typeof mock.data.status.activeSince, "number");
+});
+
+test("becoming idle stops an active signal immediately", async () => {
+  const mock = createChromeMock();
+  const controller = createController(mock.api);
+  await controller.initialize({ playImmediately: true });
+
+  await controller.handleIdleStateChanged("locked");
+
+  assert.equal(mock.calls.closeDocument, 1);
+  assert.equal(mock.calls.messages.at(-1).type, "STOP_SIGNAL");
+  assert.equal(mock.data.status.systemState, "locked");
 });
 
 test("smart mode skips scheduled playback on a video meeting page", async () => {
