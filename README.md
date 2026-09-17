@@ -13,7 +13,7 @@ Manifest V3. Chrome 109 or newer is required.
 - Chrome Alarms API instead of an in-memory timer that disappears when the
   background process stops.
 - Offscreen Audio API for supported background playback in modern Chrome.
-- Saved enabled state, interval, volume, last successful signal, and errors.
+- Saved enabled state, last successful signal, and errors.
 - Smart quiet mode skips the signal during browser audio and video calls.
 - Presence detection stops signals after 60 seconds without keyboard or mouse
   activity, whenever the computer is locked, and for one minute after return.
@@ -25,7 +25,7 @@ Manifest V3. Chrome 109 or newer is required.
 - Hardware Play/Pause keys never control or restart the wake-up signal.
 - The offscreen audio document closes as soon as each signal finishes.
 - Automatic alarm repair whenever Chrome starts or the service worker wakes up.
-- Clear ON/OFF toolbar status and a popup for settings and manual testing.
+- One-click toolbar control with a compact green/gray status indicator.
 - No remote scripts, analytics, network requests, or access to page content.
 
 ## Installation
@@ -36,13 +36,13 @@ Manifest V3. Chrome 109 or newer is required.
 3. Enable **Developer mode**.
 4. Click **Load unpacked**.
 5. Select this repository's root folder.
-6. Pin the extension, open it, and click **Play a test signal**.
+6. Pin the extension. Click its toolbar icon once to pause it and again to
+   reactivate it.
 
 The extension starts enabled with the original ten-minute interval, 100% signal
-level, and smart quiet mode. These values can be changed from the popup.
-
-> The volume slider only changes the bundled wake-up signal. Your system and
-> audio-interface volumes still determine the final output level.
+level, and smart quiet mode. Those safe defaults are fixed: the extension has no
+popup or manual test button. A compact green check means active; a gray dash
+means paused. The full state is also available in the icon's tooltip.
 
 ## How it works
 
@@ -58,8 +58,7 @@ idle or locked and waits one minute after activity resumes. It then checks
 whether a non-muted Chrome tab is audible, whether audio stopped less than two
 minutes ago, or whether a meeting room is open in Google Meet, Microsoft Teams,
 Zoom, Webex, Jitsi Meet, or Whereby. If any check is uncertain or blocked, the
-signal is skipped. The popup explains why it was skipped. The manual **Play a
-test signal** button intentionally bypasses smart mode.
+signal is skipped.
 
 The extension does not prevent the computer or display itself from sleeping. It
 only sends an audio signal intended to keep auto-standby speakers or studio
@@ -83,13 +82,8 @@ chain. If another model works, submit a pull request or use the
 
 ## Troubleshooting
 
-- Use **Play a test signal** and check that **Last signal** updates without an
-  audio error.
 - Confirm that Chrome is routed to the same output as the monitors.
-- Increase the extension signal volume or shorten the interval if the monitors
-  still enter standby.
-- Disable **Smart quiet mode** temporarily if you need the signal to run even
-  while Chrome is playing audio.
+- Leave Chrome running and confirm the toolbar indicator is a green check.
 - Laptop sleep suspends Chrome. The extension resumes when the browser and device
   wake; it cannot wake a sleeping computer.
 - After updating an unpacked copy, use the reload button on
@@ -104,8 +98,9 @@ npm test
 npm run validate
 ```
 
-`npm test` covers settings, alarm lifecycle, enable/disable behavior, meeting and
-audible-tab detection, the post-audio grace period, and offscreen-document reuse.
+`npm test` covers the fixed defaults, alarm lifecycle, serialized toolbar
+toggles, meeting and audible-tab detection, the post-audio grace period, and
+offscreen-document reuse.
 `npm run validate` checks the Manifest V3 package and all referenced assets.
 GitHub Actions runs both checks on pushes and pull requests.
 

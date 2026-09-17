@@ -17,13 +17,16 @@ test("normalizeSettings applies safe defaults", () => {
   });
 });
 
-test("normalizeSettings preserves valid values and clamps the volume", () => {
+test("normalizeSettings preserves only the enabled state", () => {
   assert.deepEqual(
-    normalizeSettings({ enabled: false, intervalMinutes: 5, volume: 2 }),
-    { enabled: false, intervalMinutes: 5, smartMode: true, volume: 1 },
+    normalizeSettings({
+      enabled: false,
+      intervalMinutes: 5,
+      smartMode: false,
+      volume: 0.05,
+    }),
+    { ...DEFAULT_SETTINGS, enabled: false },
   );
-  assert.equal(normalizeSettings({ volume: 0 }).volume, 0.05);
-  assert.equal(normalizeSettings({ smartMode: false }).smartMode, false);
 });
 
 test("iconPaths returns complete relative icon sets", () => {

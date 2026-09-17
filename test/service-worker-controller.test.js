@@ -8,6 +8,7 @@ function createChromeMock(initialStorage = {}) {
   const data = structuredClone(initialStorage);
   const alarms = new Map();
   const calls = {
+    badgeTexts: [],
     closeDocument: 0,
     createDocument: 0,
     idleIntervals: [],
@@ -21,7 +22,7 @@ function createChromeMock(initialStorage = {}) {
   const api = {
     action: {
       setBadgeBackgroundColor: async () => {},
-      setBadgeText: async () => {},
+      setBadgeText: async ({ text }) => calls.badgeTexts.push(text),
       setIcon: async () => {},
       setTitle: async () => {},
     },
@@ -105,29 +106,12 @@ test("disabling clears the alarm and closes active audio", async () => {
   const controller = createController(mock.api);
   await controller.initialize({ playImmediately: true });
 
-  const state = await controller.handleMessage({
-    type: "SET_ENABLED",
-    enabled: false,
-  });
+  const state = await controller.toggleEnabled();
 
   assert.equal(state.settings.enabled, false);
   assert.equal(mock.alarms.has(ALARM_NAME), false);
   assert.equal(mock.calls.closeDocument, 1);
   assert.equal(mock.calls.messages.at(-1).type, "STOP_SIGNAL");
-});
-
-test("changing the interval replaces the alarm without playing audio", async () => {
-  const mock = createChromeMock();
-  const controller = createController(mock.api);
-  await controller.initialize();
-
-  await controller.handleMessage({
-    type: "UPDATE_SETTINGS",
-    settings: { intervalMinutes: 5 },
-  });
-
-  assert.equal(mock.alarms.get(ALARM_NAME).periodInMinutes, 5);
-  assert.equal(mock.calls.messages.length, 0);
 });
 
 test("the named alarm plays through one reusable offscreen document", async () => {
@@ -255,34 +239,36 @@ test("smart mode skips scheduled playback on a video meeting page", async () => 
   assert.equal(mock.calls.createDocument, 0);
 });
 
-test("manual test playback bypasses smart mode", async () => {
+test("toolbar clicks toggle the extension without playing immediately", async () => {
   const mock = createChromeMock();
   const controller = createController(mock.api);
   await controller.initialize();
-  mock.setAudibleTabs([{ audible: true, mutedInfo: { muted: false } }]);
 
-  const state = await controller.handleMessage({ type: "PLAY_NOW" });
+  const disabledState = await controller.toggleEnabled();
+  const enabledState = await controller.toggleEnabled();
 
-  assert.equal(mock.calls.createDocument, 1);
-  assert.equal(state.status.lastError, null);
-  assert.equal(typeof state.status.lastPlayedAt, "number");
+  assert.equal(disabledState.settings.enabled, false);
+  assert.equal(enabledState.settings.enabled, true);
+  assert.equal(mock.alarms.get(ALARM_NAME).periodInMinutes, 10);
+  assert.equal(mock.calls.createDocument, 0);
+  assert.equal(mock.calls.messages.length, 0);
+  assert.deepEqual(mock.calls.badgeTexts, ["✓", "–", "✓"]);
 });
 
-test("disabling smart mode restores unconditional scheduled playback", async () => {
+test("rapid toolbar clicks are serialized and preserve the expected state", async () => {
   const mock = createChromeMock();
   const controller = createController(mock.api);
   await controller.initialize();
-  mock.setAudibleTabs([{ audible: true, mutedInfo: { muted: false } }]);
-  await controller.handleMessage({
-    type: "UPDATE_SETTINGS",
-    settings: { smartMode: false },
-  });
 
-  const result = await controller.handleAlarm({ name: ALARM_NAME });
+  const [disabledState, enabledState] = await Promise.all([
+    controller.toggleEnabled(),
+    controller.toggleEnabled(),
+  ]);
 
-  assert.equal(result.ok, true);
-  assert.equal(result.skipped, undefined);
-  assert.equal(mock.calls.createDocument, 1);
+  assert.equal(disabledState.settings.enabled, false);
+  assert.equal(enabledState.settings.enabled, true);
+  assert.equal(mock.alarms.get(ALARM_NAME).periodInMinutes, 10);
+  assert.deepEqual(mock.calls.badgeTexts, ["✓", "–", "✓"]);
 });
 
 test("new browser audio immediately stops an active wake-up signal", async () => {

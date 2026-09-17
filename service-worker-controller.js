@@ -18,6 +18,7 @@ import {
 
 export function createController(api, workerScope = globalThis) {
   let offscreenCreation = null;
+  let toggleQueue = Promise.resolve();
 
   async function getSettings() {
     const stored = await api.storage.local.get(SETTINGS_KEY);
@@ -35,6 +36,30 @@ export function createController(api, workerScope = globalThis) {
     return settings;
   }
 
+  async function setEnabled(enabled) {
+    const settings = await saveSettings({ enabled: Boolean(enabled) });
+    await updateAction(settings);
+
+    if (settings.enabled) {
+      await ensureAlarm(settings);
+    } else {
+      await api.alarms.clear(ALARM_NAME);
+      await stopSignal();
+    }
+
+    return getState();
+  }
+
+  async function toggleEnabled() {
+    const operation = toggleQueue.then(async () => {
+      const settings = await getSettings();
+      return setEnabled(!settings.enabled);
+    });
+
+    toggleQueue = operation.catch(() => {});
+    return operation;
+  }
+
   async function setStatus(patch) {
     const status = { ...(await getStatus()), ...patch };
     await api.storage.local.set({ [STATUS_KEY]: status });
@@ -49,7 +74,7 @@ export function createController(api, workerScope = globalThis) {
       api.action.setTitle({
         title: `Keep My Monitors Awake — ${stateLabel}`,
       }),
-      api.action.setBadgeText({ text: settings.enabled ? "ON" : "OFF" }),
+      api.action.setBadgeText({ text: settings.enabled ? "✓" : "–" }),
       api.action.setBadgeBackgroundColor({
         color: settings.enabled ? "#16845b" : "#6b7280",
       }),
@@ -292,34 +317,6 @@ export function createController(api, workerScope = globalThis) {
 
   async function handleMessage(message) {
     switch (message?.type) {
-      case "GET_STATE":
-        return getState();
-
-      case "SET_ENABLED": {
-        const settings = await saveSettings({ enabled: Boolean(message.enabled) });
-        await updateAction(settings);
-
-        if (settings.enabled) {
-          await ensureAlarm(settings);
-          await playSignal();
-        } else {
-          await api.alarms.clear(ALARM_NAME);
-          await stopSignal();
-        }
-
-        return getState();
-      }
-
-      case "UPDATE_SETTINGS": {
-        const settings = await saveSettings(message.settings ?? {});
-        await Promise.all([updateAction(settings), ensureAlarm(settings)]);
-        return getState();
-      }
-
-      case "PLAY_NOW":
-        await playSignal({ force: true });
-        return getState();
-
       case "SIGNAL_FINISHED":
         await closeSignalDocument();
         return { ok: true };
@@ -337,5 +334,6 @@ export function createController(api, workerScope = globalThis) {
     handleTabUpdated,
     initialize,
     reconcile,
+    toggleEnabled,
   };
 }

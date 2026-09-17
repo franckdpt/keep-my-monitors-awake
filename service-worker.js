@@ -24,6 +24,10 @@ chrome.idle.onStateChanged.addListener((newState) => {
   void controller.handleIdleStateChanged(newState);
 });
 
+chrome.action.onClicked.addListener(() => {
+  void controller.toggleEnabled();
+});
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.target !== "service-worker") {
     return false;

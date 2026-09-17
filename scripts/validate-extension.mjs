@@ -24,13 +24,16 @@ for (const permission of ["alarms", "idle", "offscreen", "storage", "tabs"]) {
 
 const requiredFiles = new Set([
   manifest.background?.service_worker,
-  manifest.action?.default_popup,
   ...Object.values(manifest.action?.default_icon ?? {}),
   ...Object.values(manifest.icons ?? {}),
   "offscreen.html",
   "offscreen.js",
   "tone.wav",
 ]);
+
+if (manifest.action?.default_popup) {
+  throw new Error("The toolbar action must toggle directly without a popup.");
+}
 
 for (const relativePath of requiredFiles) {
   if (!relativePath) {
