@@ -25,7 +25,7 @@ Manifest V3. Chrome 109 or newer is required.
 - A two-minute grace period avoids firing during short pauses between sounds.
 - Active wake-up audio stops immediately when a Chrome tab starts playing sound.
 - Hardware Play/Pause keys never control or restart the wake-up signal.
-- The wake signal is a smooth two-second 45 Hz pulse on both channels, replacing
+- The wake signal is a smooth six-second 45 Hz pulse on both channels, replacing
   the old 20-second 10 Hz asset that some monitors could filter out.
 - The offscreen audio document closes as soon as each signal finishes.
 - Automatic alarm repair whenever Chrome starts or the service worker wakes up.
@@ -55,7 +55,7 @@ returns to the automatic ten-minute schedule.
 ## How it works
 
 Chrome wakes the extension service worker on a scheduled alarm. The worker opens
-a short-lived offscreen document, asks it to play the bundled two-second
+a short-lived offscreen document, asks it to play the bundled six-second
 `tone.wav`, then
 lets Chrome release that document after playback. Chrome manages the alarm, and
 the settings live in extension storage, so both survive service-worker suspension

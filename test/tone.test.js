@@ -33,7 +33,7 @@ function readWave(buffer) {
   return { audio, format };
 }
 
-test("the wake signal is short, balanced, smooth, and in the audible passband", async () => {
+test("the wake signal covers monitor startup and stays balanced and smooth", async () => {
   const buffer = await readFile(new URL("../tone.wav", import.meta.url));
   const { audio, format } = readWave(buffer);
 
@@ -46,7 +46,7 @@ test("the wake signal is short, balanced, smooth, and in the audible passband", 
   });
 
   const frameCount = audio.length / format.blockAlign;
-  assert.equal(frameCount / format.sampleRate, 2);
+  assert.equal(frameCount / format.sampleRate, 6);
 
   const peaks = [0, 0];
   let maxChannelDifference = 0;
@@ -74,7 +74,7 @@ test("the wake signal is short, balanced, smooth, and in the audible passband", 
   }
 
   const estimatedFrequency = zeroCrossings / 2;
-  assert.ok(peaks.every((peak) => peak >= 0.199 && peak <= 0.201));
+  assert.ok(peaks.every((peak) => peak >= 0.249 && peak <= 0.251));
   assert.ok(maxChannelDifference < 1e-7);
   assert.ok(Math.abs(estimatedFrequency - 45) < 0.5);
   assert.ok(Math.abs(audio.readFloatLE(0)) < 1e-7);
