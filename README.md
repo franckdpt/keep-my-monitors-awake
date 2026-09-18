@@ -41,12 +41,16 @@ Manifest V3. Chrome 109 or newer is required.
 4. Click **Load unpacked**.
 5. Select this repository's root folder.
 6. Pin the extension. Click its toolbar icon once to pause it and again to
-   reactivate it.
+   reactivate it. Turning it back on immediately plays one wake-up signal.
 
 The extension starts enabled with the original ten-minute interval, 100% signal
 level, and smart quiet mode. Those safe defaults are fixed: the extension has no
 popup or manual test button. A compact green check means active; a gray dash
 means paused. The full state is also available in the icon's tooltip.
+
+An explicit OFF → ON click acts as the only manual wake command: it immediately
+plays one signal, even if smart quiet mode would normally skip that cycle, then
+returns to the automatic ten-minute schedule.
 
 ## How it works
 

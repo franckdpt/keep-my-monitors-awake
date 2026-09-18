@@ -237,7 +237,7 @@ test("smart mode skips scheduled playback on a video meeting page", async () => 
   assert.equal(mock.calls.createDocument, 0);
 });
 
-test("toolbar clicks toggle the extension without playing immediately", async () => {
+test("turning the extension on from the toolbar forces an immediate wake signal", async () => {
   const mock = createChromeMock();
   const controller = createController(mock.api);
   await controller.initialize();
@@ -248,8 +248,13 @@ test("toolbar clicks toggle the extension without playing immediately", async ()
   assert.equal(disabledState.settings.enabled, false);
   assert.equal(enabledState.settings.enabled, true);
   assert.equal(mock.alarms.get(ALARM_NAME).periodInMinutes, 10);
-  assert.equal(mock.calls.createDocument, 0);
-  assert.equal(mock.calls.messages.length, 0);
+  assert.equal(mock.calls.createDocument, 1);
+  assert.equal(mock.calls.messages.length, 1);
+  assert.deepEqual(mock.calls.messages[0], {
+    target: "offscreen",
+    type: "PLAY_SIGNAL",
+    volume: 1,
+  });
   assert.deepEqual(mock.calls.badgeTexts, ["✓", "–", "✓"]);
 });
 
@@ -266,6 +271,8 @@ test("rapid toolbar clicks are serialized and preserve the expected state", asyn
   assert.equal(disabledState.settings.enabled, false);
   assert.equal(enabledState.settings.enabled, true);
   assert.equal(mock.alarms.get(ALARM_NAME).periodInMinutes, 10);
+  assert.equal(mock.calls.createDocument, 1);
+  assert.equal(mock.calls.messages.at(-1).type, "PLAY_SIGNAL");
   assert.deepEqual(mock.calls.badgeTexts, ["✓", "–", "✓"]);
 });
 

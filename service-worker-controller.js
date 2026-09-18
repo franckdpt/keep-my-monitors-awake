@@ -42,6 +42,7 @@ export function createController(api, workerScope = globalThis) {
 
     if (settings.enabled) {
       await ensureAlarm(settings);
+      await playSignal({ force: true });
     } else {
       await api.alarms.clear(ALARM_NAME);
       await stopSignal();
