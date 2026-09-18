@@ -126,7 +126,8 @@ test("the named alarm plays through one reusable offscreen document", async () =
   assert.equal(mock.calls.createDocument, 1);
   assert.equal(mock.calls.messages.length, 2);
   assert.equal(mock.data.status.lastError, null);
-  assert.equal(typeof mock.data.status.lastPlayedAt, "number");
+  assert.equal(typeof mock.data.status.lastStartedAt, "number");
+  assert.equal(mock.data.status.lastPlayedAt, null);
 });
 
 test("a delayed alarm from system sleep is discarded", async () => {
@@ -159,6 +160,7 @@ test("a finished signal closes the offscreen document without replaying it", asy
   assert.deepEqual(result, { ok: true });
   assert.equal(mock.calls.closeDocument, 1);
   assert.equal(mock.calls.messages.length, messagesBeforeCleanup);
+  assert.equal(typeof mock.data.status.lastPlayedAt, "number");
 });
 
 test("smart mode skips scheduled playback while a browser tab is audible", async () => {
@@ -179,7 +181,7 @@ test("smart mode skips scheduled playback while a browser tab is audible", async
   assert.equal(typeof mock.data.status.lastAudibleAt, "number");
 });
 
-test("smart mode fails closed while the computer is idle", async () => {
+test("smart mode keeps protecting speakers during passive listening", async () => {
   const mock = createChromeMock();
   const controller = createController(mock.api);
   await controller.initialize();
@@ -187,21 +189,17 @@ test("smart mode fails closed while the computer is idle", async () => {
 
   const result = await controller.handleAlarm({ name: ALARM_NAME });
 
-  assert.deepEqual(result, {
-    ok: true,
-    skipped: true,
-    reason: "user-idle",
-  });
-  assert.equal(mock.calls.createDocument, 0);
+  assert.deepEqual(result, { ok: true });
+  assert.equal(mock.calls.createDocument, 1);
   assert.equal(mock.data.status.systemState, "idle");
 });
 
-test("returning from idle waits before automatic playback resumes", async () => {
+test("returning from a locked session waits before automatic playback resumes", async () => {
   const mock = createChromeMock();
   const controller = createController(mock.api);
   await controller.initialize();
 
-  await controller.handleIdleStateChanged("idle");
+  await controller.handleIdleStateChanged("locked");
   await controller.handleIdleStateChanged("active");
   const result = await controller.handleAlarm({ name: ALARM_NAME });
 
@@ -212,7 +210,7 @@ test("returning from idle waits before automatic playback resumes", async () => 
   assert.equal(typeof mock.data.status.activeSince, "number");
 });
 
-test("becoming idle stops an active signal immediately", async () => {
+test("locking the session stops an active signal immediately", async () => {
   const mock = createChromeMock();
   const controller = createController(mock.api);
   await controller.initialize({ playImmediately: true });

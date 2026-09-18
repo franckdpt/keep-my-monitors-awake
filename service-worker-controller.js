@@ -182,7 +182,7 @@ export function createController(api, workerScope = globalThis) {
 
       await setStatus({
         ...(activityStatus ?? {}),
-        lastPlayedAt: Date.now(),
+        lastStartedAt: Date.now(),
         lastError: null,
       });
       return { ok: true };
@@ -300,17 +300,20 @@ export function createController(api, workerScope = globalThis) {
   async function handleIdleStateChanged(newState) {
     const status = await getStatus();
     const isActive = newState === "active";
+    const isLocked = newState === "locked";
     await setStatus({
       systemState: newState,
       activeSince:
-        isActive && status.systemState !== "active"
+        isActive && ["locked", "unknown"].includes(status.systemState)
           ? Date.now()
           : isActive
             ? status.activeSince
-            : null,
+            : isLocked
+              ? null
+              : status.activeSince,
     });
 
-    if (!isActive) {
+    if (isLocked) {
       await stopSignal();
     }
   }
@@ -318,6 +321,10 @@ export function createController(api, workerScope = globalThis) {
   async function handleMessage(message) {
     switch (message?.type) {
       case "SIGNAL_FINISHED":
+        await setStatus({
+          lastPlayedAt: Date.now(),
+          lastError: null,
+        });
         await closeSignalDocument();
         return { ok: true };
 

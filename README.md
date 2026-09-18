@@ -2,7 +2,7 @@
 
 Keep My Monitors Awake is a lightweight Chrome extension that prevents active
 studio monitors from entering standby. It periodically plays a local
-low-frequency signal through the selected system audio output.
+low-frequency stereo signal through the selected system audio output.
 
 The extension is built for **Google Chrome and Chromium-based browsers** using
 Manifest V3. Chrome 109 or newer is required.
@@ -13,16 +13,20 @@ Manifest V3. Chrome 109 or newer is required.
 - Chrome Alarms API instead of an in-memory timer that disappears when the
   background process stops.
 - Offscreen Audio API for supported background playback in modern Chrome.
-- Saved enabled state, last successful signal, and errors.
+- Saved enabled state, signal start and completion times, and errors.
 - Smart quiet mode skips the signal during browser audio and video calls.
-- Presence detection stops signals after 60 seconds without keyboard or mouse
-  activity, whenever the computer is locked, and for one minute after return.
+- Presence detection stops signals when the computer is locked and for one
+  minute after it is unlocked.
+- Passive listening is not mistaken for absence merely because the keyboard and
+  mouse have not moved.
 - Presence checks fail closed: if Chrome cannot confirm activity, no signal plays.
 - Delayed alarms are discarded after sleep, and browser startup or extension
   updates never trigger an immediate signal.
 - A two-minute grace period avoids firing during short pauses between sounds.
 - Active wake-up audio stops immediately when a Chrome tab starts playing sound.
 - Hardware Play/Pause keys never control or restart the wake-up signal.
+- The wake signal is a smooth two-second 45 Hz pulse on both channels, replacing
+  the old 20-second 10 Hz asset that some monitors could filter out.
 - The offscreen audio document closes as soon as each signal finishes.
 - Automatic alarm repair whenever Chrome starts or the service worker wakes up.
 - One-click toolbar control with a compact green/gray status indicator.
@@ -47,14 +51,16 @@ means paused. The full state is also available in the icon's tooltip.
 ## How it works
 
 Chrome wakes the extension service worker on a scheduled alarm. The worker opens
-a short-lived offscreen document, asks it to play the bundled `tone.wav`, then
+a short-lived offscreen document, asks it to play the bundled two-second
+`tone.wav`, then
 lets Chrome release that document after playback. Chrome manages the alarm, and
 the settings live in extension storage, so both survive service-worker suspension
 and browser restarts.
 
-Before every automatic signal, smart quiet mode first confirms recent system
-activity through Chrome's Idle API. It stops immediately when the computer is
-idle or locked and waits one minute after activity resumes. It then checks
+Before every automatic signal, smart quiet mode checks the session state through
+Chrome's Idle API. It stops immediately when the computer is locked and waits
+one minute after it is unlocked. Simple keyboard or mouse inactivity does not
+count as absence, because that would interrupt passive listening. It then checks
 whether a non-muted Chrome tab is audible, whether audio stopped less than two
 minutes ago, or whether a meeting room is open in Google Meet, Microsoft Teams,
 Zoom, Webex, Jitsi Meet, or Whereby. If any check is uncertain or blocked, the
@@ -67,6 +73,8 @@ monitors awake.
 Chrome does not expose the global macOS/Windows output level to extensions. Smart
 mode can therefore detect browser audio, but not audio produced only by native
 applications such as a DAW, Spotify desktop, or a desktop video-call app.
+Signals continue during those native applications so a quiet channel cannot let
+one monitor enter standby.
 
 ## Compatible monitors
 
@@ -125,5 +133,5 @@ If this extension helps you, you can offer a coffee:
 
 ## Credits
 
-The sound asset is based on
+The original concept was inspired by
 [KRK_stayawake by @stuartdochertymusic](https://github.com/stuartdochertymusic/KRK_stayawake).

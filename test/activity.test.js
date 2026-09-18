@@ -88,9 +88,16 @@ test("detectBlockingActivity keeps a grace period after browser audio", async ()
   );
 });
 
-test("presence detection fails closed while idle, locked, or unavailable", async () => {
+test("presence detection allows passive listening but blocks locked or unknown sessions", async () => {
+  const idleResult = await detectUserPresence(
+    createActivityApi({ idleState: "idle" }),
+    {},
+    10_000,
+  );
+  assert.equal(idleResult.blocked, false);
+  assert.equal(idleResult.reason, null);
+
   for (const [idleState, reason] of [
-    ["idle", "user-idle"],
     ["locked", "session-locked"],
     ["unexpected", "presence-unknown"],
   ]) {
@@ -131,7 +138,7 @@ test("presence detection infers a return if the state event was missed", async (
   const now = 1_000_000;
   const result = await detectUserPresence(
     createActivityApi(),
-    { activeSince: null, systemState: "idle" },
+    { activeSince: null, systemState: "locked" },
     now,
   );
 
