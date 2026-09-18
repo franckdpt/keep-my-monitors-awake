@@ -194,20 +194,33 @@ test("smart mode keeps protecting speakers during passive listening", async () =
   assert.equal(mock.data.status.systemState, "idle");
 });
 
-test("returning from a locked session waits before automatic playback resumes", async () => {
+test("unlocking immediately wakes the monitors when smart mode allows it", async () => {
   const mock = createChromeMock();
   const controller = createController(mock.api);
   await controller.initialize();
 
   await controller.handleIdleStateChanged("locked");
-  await controller.handleIdleStateChanged("active");
-  const result = await controller.handleAlarm({ name: ALARM_NAME });
+  const result = await controller.handleIdleStateChanged("active");
+
+  assert.deepEqual(result, { ok: true });
+  assert.equal(mock.calls.createDocument, 1);
+  assert.equal(mock.calls.messages.at(-1).type, "PLAY_SIGNAL");
+  assert.equal(mock.data.status.systemState, "active");
+  assert.equal(mock.data.status.activeSince, null);
+});
+
+test("unlocking remains quiet during browser audio", async () => {
+  const mock = createChromeMock();
+  const controller = createController(mock.api);
+  await controller.initialize();
+  mock.setAudibleTabs([{ audible: true, mutedInfo: { muted: false } }]);
+
+  await controller.handleIdleStateChanged("locked");
+  const result = await controller.handleIdleStateChanged("active");
 
   assert.equal(result.skipped, true);
-  assert.equal(result.reason, "return-grace");
+  assert.equal(result.reason, "browser-audio");
   assert.equal(mock.calls.createDocument, 0);
-  assert.equal(mock.data.status.systemState, "active");
-  assert.equal(typeof mock.data.status.activeSince, "number");
 });
 
 test("locking the session stops an active signal immediately", async () => {

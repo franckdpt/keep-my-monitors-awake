@@ -302,13 +302,16 @@ export function createController(api, workerScope = globalThis) {
     const status = await getStatus();
     const isActive = newState === "active";
     const isLocked = newState === "locked";
+    const justUnlocked = isActive && status.systemState === "locked";
     await setStatus({
       systemState: newState,
       activeSince:
-        isActive && ["locked", "unknown"].includes(status.systemState)
+        isActive && status.systemState === "unknown"
           ? Date.now()
           : isActive
-            ? status.activeSince
+            ? justUnlocked
+              ? null
+              : status.activeSince
             : isLocked
               ? null
               : status.activeSince,
@@ -316,6 +319,10 @@ export function createController(api, workerScope = globalThis) {
 
     if (isLocked) {
       await stopSignal();
+    }
+
+    if (justUnlocked) {
+      return playSignal();
     }
   }
 

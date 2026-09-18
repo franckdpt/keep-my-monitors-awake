@@ -15,8 +15,9 @@ Manifest V3. Chrome 109 or newer is required.
 - Offscreen Audio API for supported background playback in modern Chrome.
 - Saved enabled state, signal start and completion times, and errors.
 - Smart quiet mode skips the signal during browser audio and video calls.
-- Presence detection stops signals when the computer is locked and for one
-  minute after it is unlocked.
+- Presence detection stops signals while the computer is locked.
+- Unlocking the computer immediately attempts one wake signal, while still
+  respecting browser-audio and video-call protection.
 - Passive listening is not mistaken for absence merely because the keyboard and
   mouse have not moved.
 - Presence checks fail closed: if Chrome cannot confirm activity, no signal plays.
@@ -56,16 +57,17 @@ returns to the automatic ten-minute schedule.
 
 Chrome wakes the extension service worker on a scheduled alarm. The worker opens
 a short-lived offscreen document, asks it to play the bundled six-second
-`tone.wav`, then
-lets Chrome release that document after playback. Chrome manages the alarm, and
+`tone.wav`, then lets Chrome release that document after playback. Chrome
+manages the alarm, and
 the settings live in extension storage, so both survive service-worker suspension
 and browser restarts.
 
 Before every automatic signal, smart quiet mode checks the session state through
 Chrome's Idle API. It stops immediately when the computer is locked and waits
-one minute after it is unlocked. Simple keyboard or mouse inactivity does not
-count as absence, because that would interrupt passive listening. It then checks
-whether a non-muted Chrome tab is audible, whether audio stopped less than two
+for the next user unlock. On unlock, it immediately attempts one wake signal.
+Simple keyboard or mouse inactivity does not count as absence, because that
+would interrupt passive listening. It then checks whether a non-muted Chrome
+tab is audible, whether audio stopped less than two
 minutes ago, or whether a meeting room is open in Google Meet, Microsoft Teams,
 Zoom, Webex, Jitsi Meet, or Whereby. If any check is uncertain or blocked, the
 signal is skipped.
